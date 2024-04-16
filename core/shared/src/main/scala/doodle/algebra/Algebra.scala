@@ -17,7 +17,7 @@
 package doodle
 package algebra
 
-import cats.Monad
+import cats.Functor
 
 /** Base type for algebras that produce results in some effect type `Drawing`.
   * Users of algebras should use dependent method types (or dependent function
@@ -36,8 +36,12 @@ trait Algebra {
     * that, when run, will draw something and produce a value.
     */
   type Drawing[_]
-  implicit val drawingInstance: Monad[Drawing]
+  implicit val drawingInstance: AndThen[Drawing]
 }
 object Algebra {
   type Aux[F0[_]] = Algebra { type Drawing[A] = F0[A] }
+}
+
+trait AndThen[F[_]] extends Functor[F] {
+  def andThen[A, B](fa: F[A])(f: A => F[B]): F[B]
 }

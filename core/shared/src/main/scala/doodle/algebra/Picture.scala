@@ -26,11 +26,11 @@ import cats._
 trait Picture[-Alg <: Algebra, A] { self =>
   def apply(implicit algebra: Alg): algebra.Drawing[A]
 
-  def flatMap[B, AAlg <: Alg](f: A => Picture[AAlg, B]): Picture[AAlg, B] = {
+  def andThen[B, AAlg <: Alg](f: A => Picture[AAlg, B]): Picture[AAlg, B] = {
     val self = this
     new Picture[AAlg, B] {
       def apply(implicit algebra: AAlg): algebra.Drawing[B] =
-        algebra.drawingInstance.flatMap(self.apply(algebra))(a =>
+        algebra.drawingInstance.andThen(self.apply(algebra))(a =>
           f(a).apply(algebra)
         )
     }
@@ -72,26 +72,12 @@ object Picture {
         }
     }
 
-  implicit def pictureMonadInstance[Alg <: Algebra]: Monad[Picture[Alg, *]] =
-    new Monad[Picture[Alg, *]] {
-      def pure[A](x: A): Picture[Alg, A] =
-        new Picture[Alg, A] {
-          def apply(implicit algebra: Alg): algebra.Drawing[A] =
-            algebra.drawingInstance.pure(x)
-        }
-
-      def flatMap[A, B](
-          fa: Picture[Alg, A]
-      )(f: A => Picture[Alg, B]): Picture[Alg, B] =
-        fa.flatMap(f)
-
-      def tailRecM[A, B](
-          a: A
-      )(f: A => Picture[Alg, Either[A, B]]): Picture[Alg, B] =
-        new Picture[Alg, B] {
-          def apply(implicit algebra: Alg): algebra.Drawing[B] =
-            algebra.drawingInstance.tailRecM(a)(a => f(a).apply(algebra))
-        }
-
-    }
+  implicit def pictureFunctorInstance[Alg <: Algebra]
+      : Functor[Picture[Alg, *]] = new Functor[Picture[Alg, *]] {
+    def map[A, B](fa: Picture[Alg, A])(f: A => B): Picture[Alg, B] =
+      new Picture[Alg, B] {
+        def apply(implicit algebra: Alg): algebra.Drawing[B] =
+          algebra.drawingInstance.map(fa(algebra))(f)
+      }
+  }
 }

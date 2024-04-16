@@ -59,33 +59,7 @@ trait JvmAlgebraModule
     implicit val functorDrawing: cats.Functor[JvmAlgebraModule.this.SvgResult] =
       Svg.svgResultApplicative
 
-    implicit val drawingInstance: Monad[Drawing] =
-      new Monad[Drawing] {
-        def pure[A](x: A): JvmAlgebra.this.Drawing[A] =
-          Finalized.leaf(_ =>
-            (
-              BoundingBox.empty,
-              Renderable(_ => Eval.now(Svg.svgResultApplicative.pure(x)))
-            )
-          )
-
-        def flatMap[A, B](fa: Drawing[A])(f: A => Drawing[B]): Drawing[B] =
-          fa.flatMap { (bb, rdr) =>
-            val (_, _, a) = rdr.runA(doodle.core.Transform.identity).value
-            f(a)
-          }
-
-        def tailRecM[A, B](a: A)(f: A => Drawing[Either[A, B]]): Drawing[B] = {
-          // TODO: This implementation is not tail recursive but I don't think we need it for what we use in Doodle
-          val dAB = f(a)
-          flatMap(dAB)(either =>
-            either match {
-              case Left(a)  => tailRecM(a)(f)
-              case Right(b) => dAB.asInstanceOf[Drawing[B]]
-            }
-          )
-        }
-      }
+    implicit val drawingInstance: doodle.algebra.AndThen[Drawing] = ???
   }
 
   val algebraInstance = new JvmAlgebra()

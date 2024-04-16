@@ -45,34 +45,7 @@ trait JsAlgebraModule
     def textBoundingBox(text: String, font: Font): (BoundingBox, Rect) =
       canvas.textBoundingBox(text, font)
 
-    implicit val drawingInstance: cats.Monad[JsAlgebra.this.Drawing] =
-      new Monad[Drawing] {
-        def pure[A](x: A): JsAlgebra.this.Drawing[A] =
-          Finalized.leaf(_ =>
-            (
-              BoundingBox.empty,
-              Renderable(_ => Eval.now(Svg.svgResultApplicative.pure(x)))
-            )
-          )
-
-        def flatMap[A, B](fa: Drawing[A])(f: A => Drawing[B]): Drawing[B] =
-          fa.flatMap { (bb, rdr) =>
-            val (_, _, a) = rdr.runA(doodle.core.Transform.identity).value
-            f(a)
-          }
-
-        def tailRecM[A, B](a: A)(f: A => Drawing[Either[A, B]]): Drawing[B] = {
-          // TODO: This implementation is not tail recursive but I don't think we need it for what we use in Doodle
-          val dAB = f(a)
-          flatMap(dAB)(either =>
-            either match {
-              case Left(a)  => tailRecM(a)(f)
-              case Right(b) => dAB.asInstanceOf[Drawing[B]]
-            }
-          )
-        }
-
-      }
+    implicit val drawingInstance: doodle.algebra.AndThen[JsAlgebra.this.Drawing] = ???
 
     implicit val applyDrawing: cats.Apply[JsAlgebraModule.this.SvgResult] =
       Svg.svgResultApplicative
